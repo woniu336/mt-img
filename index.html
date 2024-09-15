@@ -3,19 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>优雅的图片上传</title>
+    <title>美团CDN图床</title>
     <style>
-        /* 保留原有样式 */
-        body {
-            font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
-            background-color: #f0f4f8;
+        body, html {
+            height: 100%;
+            margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            background-color: #f0f4f8;
         }
         .container {
             background-color: #ffffff;
@@ -23,41 +20,28 @@
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             text-align: center;
+            width: 90%;
             max-width: 500px;
-            width: 100%;
         }
         h2 {
             color: #2c3e50;
             margin-bottom: 1.5rem;
         }
-        form {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .file-input-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            background-color: #3498db;
-            color: white;
-            padding: 10px 20px;
+        #uploadArea {
+            border: 2px dashed #3498db;
+            padding: 20px;
+            margin-top: 1rem;
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-        .file-input-wrapper:hover {
-            background-color: #2980b9;
+        #uploadArea:hover {
+            background-color: #ecf0f1;
         }
-        .file-input-wrapper input[type=file] {
-            font-size: 100px;
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            cursor: pointer;
+        #fileInput {
+            display: none;
         }
-        button {
+        #uploadBtn {
             background-color: #2ecc71;
             color: white;
             border: none;
@@ -67,13 +51,20 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-        button:hover {
+        #uploadBtn:hover {
             background-color: #27ae60;
         }
-        .selected-file {
+        #previewImage {
+            max-width: 100%;
+            height: auto;
             margin-top: 1rem;
-            font-size: 0.9rem;
-            color: #7f8c8d;
+            display: none;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #uploadStatus {
+            margin-top: 1rem;
+            font-weight: bold;
         }
         #resultContainer {
             display: none;
@@ -113,42 +104,101 @@
         code {
             font-family: 'Courier New', Courier, monospace;
         }
-        #previewImage {
-            max-width: 100%;
-            height: auto;
-            margin-top: 1rem;
-            display: none;
-        }
-        #uploadStatus {
-            margin-top: 1rem;
-            font-weight: bold;
-        }
-        #pasteArea {
-            border: 2px dashed #3498db;
-            padding: 20px;
-            margin-top: 1rem;
+        #galleryBtn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-        #pasteArea:hover {
-            background-color: #ecf0f1;
+        #galleryBtn:hover {
+            background-color: #2980b9;
+        }
+        #galleryModal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 1200px;
+            border-radius: 8px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        #galleryGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .gallery-item:hover {
+            transform: scale(1.05);
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .gallery-item .copy-url-btn {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(52, 152, 219, 0.8);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .gallery-item .copy-url-btn:hover {
+            background-color: rgba(41, 128, 185, 1);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>美团CDN图床</h2>
-        <form id="uploadForm">
-            <div class="file-input-wrapper">
-                选择图片
-                <input type="file" name="file" accept="image/*" id="fileInput">
-            </div>
-            <div class="selected-file" id="selectedFile">未选择文件</div>
-            <div id="pasteArea">点击此处粘贴图片或直接拖放图片到此区域</div>
-            <img id="previewImage" alt="预览图片">
-            <button type="submit">上传</button>
-        </form>
+        <h2>优雅的图片上传</h2>
+        <div id="uploadArea">
+            点击或拖拽图片到此处上传
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+        <img id="previewImage" alt="预览图片">
+        <button id="uploadBtn">上传图片</button>
         <div id="uploadStatus"></div>
         <div id="resultContainer">
             <h3>上传结果</h3>
@@ -158,14 +208,6 @@
                 <button class="copy-btn" data-copy="imageUrl">复制链接</button>
             </div>
             <div class="result-item">
-                <span class="result-label">文件名：</span>
-                <span class="result-value" id="fileName"></span>
-            </div>
-            <div class="result-item">
-                <span class="result-label">服务器：</span>
-                <span class="result-value" id="serverName"></span>
-            </div>
-            <div class="result-item">
                 <span class="result-label">Markdown：</span>
                 <pre><code id="markdownCode"></code></pre>
                 <button class="copy-btn" data-copy="markdownCode">复制 Markdown</button>
@@ -173,27 +215,59 @@
         </div>
     </div>
 
+    <button id="galleryBtn">图库</button>
+
+    <div id="galleryModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>历史图片</h2>
+            <div id="galleryGrid"></div>
+        </div>
+    </div>
+
     <script>
+        const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
-        const selectedFile = document.getElementById('selectedFile');
-        const uploadForm = document.getElementById('uploadForm');
-        const resultContainer = document.getElementById('resultContainer');
         const previewImage = document.getElementById('previewImage');
+        const uploadBtn = document.getElementById('uploadBtn');
         const uploadStatus = document.getElementById('uploadStatus');
-        const pasteArea = document.getElementById('pasteArea');
+        const resultContainer = document.getElementById('resultContainer');
+        const galleryBtn = document.getElementById('galleryBtn');
+        const galleryModal = document.getElementById('galleryModal');
+        const closeBtn = document.getElementsByClassName('close')[0];
+        const galleryGrid = document.getElementById('galleryGrid');
 
+        // 点击上传区域触发文件选择
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // 文件选择处理
         fileInput.addEventListener('change', handleFileSelect);
-        pasteArea.addEventListener('paste', handlePaste);
-        pasteArea.addEventListener('dragover', handleDragOver);
-        pasteArea.addEventListener('drop', handleDrop);
 
-        // 添加键盘事件监听器
+        // 拖拽处理
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.style.backgroundColor = '#ecf0f1';
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.style.backgroundColor = '';
+        });
+
+        uploadArea.addEventListener('drop', handleDrop);
+
+        // 粘贴处理
+        document.addEventListener('paste', handlePaste);
+
+        // 上传按钮点击事件
+        uploadBtn.addEventListener('click', uploadImage);
+
+        // 回车键触发上传
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
-                e.preventDefault();
-                if (fileInput.files.length > 0 || previewImage.src) {
-                    uploadImage();
-                }
+            if (e.key === 'Enter' && previewImage.src) {
+                uploadImage();
             }
         });
 
@@ -204,8 +278,17 @@
             }
         }
 
-        function handlePaste(event) {
+        function handleDrop(event) {
             event.preventDefault();
+            event.stopPropagation();
+            uploadArea.style.backgroundColor = '';
+            const file = event.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                processFile(file);
+            }
+        }
+
+        function handlePaste(event) {
             const items = (event.clipboardData || event.originalEvent.clipboardData).items;
             for (const item of items) {
                 if (item.type.indexOf('image') !== -1) {
@@ -216,22 +299,7 @@
             }
         }
 
-        function handleDragOver(event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-
-        function handleDrop(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            const file = event.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                processFile(file);
-            }
-        }
-
         function processFile(file) {
-            selectedFile.textContent = file.name;
             const reader = new FileReader();
             reader.onload = function(e) {
                 previewImage.src = e.target.result;
@@ -240,111 +308,102 @@
             reader.readAsDataURL(file);
         }
 
-        uploadForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            uploadImage();
-        });
-
         function uploadImage() {
+            if (!previewImage.src) {
+                uploadStatus.textContent = '请先选择或粘贴一张图片';
+                return;
+            }
+
             uploadStatus.textContent = '上传中...';
             
             const formData = new FormData();
-            const file = fileInput.files[0] || dataURLtoFile(previewImage.src, 'pasted_image.png');
-            formData.append('file', file);
+            fetch(previewImage.src)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], "image.jpg", { type: "image/jpeg" });
+                    formData.append('file', file);
 
-            fetch('mt.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                uploadStatus.textContent = '上传成功！图片链接已自动复制到剪贴板。';
-                displayResult(data);
-                copyTextToClipboard(data.Jobs); // 自动复制图片URL
-            })
-            .catch(error => {
-                console.error('上传错误:', error);
-                uploadStatus.textContent = '上传失败，请重试。';
-            });
-        }
-
-        function dataURLtoFile(dataurl, filename) {
-            let arr = dataurl.split(','),
-                mime = arr[0].match(/:(.*?);/)[1],
-                bstr = atob(arr[1]), 
-                n = bstr.length, 
-                u8arr = new Uint8Array(n);
-            while(n--){
-                u8arr[n] = bstr.charCodeAt(n);
-            }
-            return new File([u8arr], filename, {type:mime});
+                    fetch('mt.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        uploadStatus.textContent = '上传成功！图片链接已自动复制到剪贴板。';
+                        displayResult(data);
+                        copyTextToClipboard(data.Jobs);
+                        saveToLocalStorage(data);
+                    })
+                    .catch(error => {
+                        console.error('上传错误:', error);
+                        uploadStatus.textContent = '上传失败，请重试。';
+                    });
+                });
         }
 
         function displayResult(data) {
             document.getElementById('imageUrl').textContent = data.Jobs;
-            document.getElementById('fileName').textContent = data.Name;
-            document.getElementById('serverName').textContent = data.os;
-            document.getElementById('markdownCode').textContent = `![${data.Name}](${data.Jobs})`;
+            document.getElementById('markdownCode').textContent = `![Image](${data.Jobs})`;
             resultContainer.style.display = 'block';
+        }
+
+        function copyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+        }
+
+        function saveToLocalStorage(data) {
+            let images = JSON.parse(localStorage.getItem('uploadedImages')) || [];
+            images.unshift(data);
+            localStorage.setItem('uploadedImages', JSON.stringify(images));
+        }
+
+        galleryBtn.onclick = function() {
+            galleryModal.style.display = "block";
+            loadGallery();
+        }
+
+        closeBtn.onclick = function() {
+            galleryModal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == galleryModal) {
+                galleryModal.style.display = "none";
+            }
+        }
+
+        function loadGallery() {
+            const images = JSON.parse(localStorage.getItem('uploadedImages')) || [];
+            galleryGrid.innerHTML = '';
+            images.forEach(image => {
+                const item = document.createElement('div');
+                item.className = 'gallery-item';
+                item.innerHTML = `
+                    <img src="${image.Jobs}" alt="Uploaded Image">
+                    <button class="copy-url-btn">复制链接</button>
+                `;
+                item.querySelector('.copy-url-btn').onclick = function() {
+                    copyTextToClipboard(image.Jobs);
+                    this.textContent = '已复制';
+                    setTimeout(() => this.textContent = '复制链接', 2000);
+                };
+                galleryGrid.appendChild(item);
+            });
         }
 
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('copy-btn')) {
                 const textToCopy = document.getElementById(e.target.getAttribute('data-copy')).textContent;
-                copyTextToClipboard(textToCopy, e.target);
+                copyTextToClipboard(textToCopy);
+                e.target.textContent = '已复制';
+                setTimeout(() => e.target.textContent = '复制链接', 2000);
             }
         });
-
-        function copyTextToClipboard(text, button = null) {
-            if (!navigator.clipboard) {
-                fallbackCopyTextToClipboard(text, button);
-                return;
-            }
-            navigator.clipboard.writeText(text).then(function() {
-                if (button) {
-                    showCopiedFeedback(button);
-                }
-            }, function(err) {
-                console.error('无法复制文本: ', err);
-                alert('复制失败，请手动复制。');
-            });
-        }
-
-        function fallbackCopyTextToClipboard(text, button) {
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            textArea.style.top = "0";
-            textArea.style.left = "0";
-            textArea.style.position = "fixed";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-
-            try {
-                const successful = document.execCommand('copy');
-                if (successful && button) {
-                    showCopiedFeedback(button);
-                } else if (!successful) {
-                    console.error('复制命令未成功执行');
-                    alert('复制失败，请手动复制。');
-                }
-            } catch (err) {
-                console.error('无法执行复制', err);
-                alert('复制失败，请手动复制。');
-            }
-
-            document.body.removeChild(textArea);
-        }
-
-        function showCopiedFeedback(button) {
-            const originalText = button.textContent;
-            button.textContent = '已复制！';
-            button.disabled = true;
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.disabled = false;
-            }, 2000);
-        }
     </script>
 </body>
 </html>
