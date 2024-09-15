@@ -294,6 +294,8 @@
                 if (item.type.indexOf('image') !== -1) {
                     const file = item.getAsFile();
                     processFile(file);
+                    // 在处理完文件后立即触发上传
+                    setTimeout(uploadImage, 100);  // 短暂延迟以确保预览图片已加载
                     break;
                 }
             }
