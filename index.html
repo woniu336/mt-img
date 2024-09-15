@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>优雅的图片上传</title>
+    <style>
+        /* 保留原有样式 */
+        body {
+            font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .file-input-wrapper:hover {
+            background-color: #2980b9;
+        }
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        button {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin-top: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #27ae60;
+        }
+        .selected-file {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        #resultContainer {
+            display: none;
+            margin-top: 2rem;
+            text-align: left;
+        }
+        .result-item {
+            margin-bottom: 1rem;
+        }
+        .result-label {
+            font-weight: bold;
+            color: #34495e;
+        }
+        .result-value {
+            word-break: break-all;
+        }
+        .copy-btn {
+            background-color: #9b59b6;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 10px;
+            transition: background-color 0.3s ease;
+        }
+        .copy-btn:hover {
+            background-color: #8e44ad;
+        }
+        pre {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #previewImage {
+            max-width: 100%;
+            height: auto;
+            margin-top: 1rem;
+            display: none;
+        }
+        #uploadStatus {
+            margin-top: 1rem;
+            font-weight: bold;
+        }
+        #pasteArea {
+            border: 2px dashed #3498db;
+            padding: 20px;
+            margin-top: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #pasteArea:hover {
+            background-color: #ecf0f1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>美团CDN图床</h2>
+        <form id="uploadForm">
+            <div class="file-input-wrapper">
+                选择图片
+                <input type="file" name="file" accept="image/*" id="fileInput">
+            </div>
+            <div class="selected-file" id="selectedFile">未选择文件</div>
+            <div id="pasteArea">点击此处粘贴图片或直接拖放图片到此区域</div>
+            <img id="previewImage" alt="预览图片">
+            <button type="submit">上传</button>
+        </form>
+        <div id="uploadStatus"></div>
+        <div id="resultContainer">
+            <h3>上传结果</h3>
+            <div class="result-item">
+                <span class="result-label">图片链接：</span>
+                <span class="result-value" id="imageUrl"></span>
+                <button class="copy-btn" data-copy="imageUrl">复制链接</button>
+            </div>
+            <div class="result-item">
+                <span class="result-label">文件名：</span>
+                <span class="result-value" id="fileName"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">服务器：</span>
+                <span class="result-value" id="serverName"></span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Markdown：</span>
+                <pre><code id="markdownCode"></code></pre>
+                <button class="copy-btn" data-copy="markdownCode">复制 Markdown</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const selectedFile = document.getElementById('selectedFile');
+        const uploadForm = document.getElementById('uploadForm');
+        const resultContainer = document.getElementById('resultContainer');
+        const previewImage = document.getElementById('previewImage');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const pasteArea = document.getElementById('pasteArea');
+
+        fileInput.addEventListener('change', handleFileSelect);
+        pasteArea.addEventListener('paste', handlePaste);
+        pasteArea.addEventListener('dragover', handleDragOver);
+        pasteArea.addEventListener('drop', handleDrop);
+
+        // 添加键盘事件监听器
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+                e.preventDefault();
+                if (fileInput.files.length > 0 || previewImage.src) {
+                    uploadImage();
+                }
+            }
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        function handlePaste(event) {
+            event.preventDefault();
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            for (const item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    const file = item.getAsFile();
+                    processFile(file);
+                    break;
+                }
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const file = event.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                processFile(file);
+            }
+        }
+
+        function processFile(file) {
+            selectedFile.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                previewImage.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        }
+
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            uploadImage();
+        });
+
+        function uploadImage() {
+            uploadStatus.textContent = '上传中...';
+            
+            const formData = new FormData();
+            const file = fileInput.files[0] || dataURLtoFile(previewImage.src, 'pasted_image.png');
+            formData.append('file', file);
+
+            fetch('mt.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                uploadStatus.textContent = '上传成功！图片链接已自动复制到剪贴板。';
+                displayResult(data);
+                copyTextToClipboard(data.Jobs); // 自动复制图片URL
+            })
+            .catch(error => {
+                console.error('上传错误:', error);
+                uploadStatus.textContent = '上传失败，请重试。';
+            });
+        }
+
+        function dataURLtoFile(dataurl, filename) {
+            let arr = dataurl.split(','),
+                mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]), 
+                n = bstr.length, 
+                u8arr = new Uint8Array(n);
+            while(n--){
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], filename, {type:mime});
+        }
+
+        function displayResult(data) {
+            document.getElementById('imageUrl').textContent = data.Jobs;
+            document.getElementById('fileName').textContent = data.Name;
+            document.getElementById('serverName').textContent = data.os;
+            document.getElementById('markdownCode').textContent = `![${data.Name}](${data.Jobs})`;
+            resultContainer.style.display = 'block';
+        }
+
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('copy-btn')) {
+                const textToCopy = document.getElementById(e.target.getAttribute('data-copy')).textContent;
+                copyTextToClipboard(textToCopy, e.target);
+            }
+        });
+
+        function copyTextToClipboard(text, button = null) {
+            if (!navigator.clipboard) {
+                fallbackCopyTextToClipboard(text, button);
+                return;
+            }
+            navigator.clipboard.writeText(text).then(function() {
+                if (button) {
+                    showCopiedFeedback(button);
+                }
+            }, function(err) {
+                console.error('无法复制文本: ', err);
+                alert('复制失败，请手动复制。');
+            });
+        }
+
+        function fallbackCopyTextToClipboard(text, button) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful && button) {
+                    showCopiedFeedback(button);
+                } else if (!successful) {
+                    console.error('复制命令未成功执行');
+                    alert('复制失败，请手动复制。');
+                }
+            } catch (err) {
+                console.error('无法执行复制', err);
+                alert('复制失败，请手动复制。');
+            }
+
+            document.body.removeChild(textArea);
+        }
+
+        function showCopiedFeedback(button) {
+            const originalText = button.textContent;
+            button.textContent = '已复制！';
+            button.disabled = true;
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
