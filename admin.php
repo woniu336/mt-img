@@ -70,7 +70,7 @@ $averageCompressionRatio = $totalSize > 0 ? ($totalSavings / $totalSize * 100) :
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理后台 - 腾讯Gtimg图床</title>
+    <title>管理后台 - 美团图床</title>
     <style>
         :root {
             --primary-color: #3498db;
